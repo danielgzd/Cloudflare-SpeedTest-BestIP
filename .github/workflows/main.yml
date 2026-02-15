@@ -1,0 +1,42 @@
+name: CF IP Optimizer
+
+on:
+  schedule:
+    - cron: '0 20 * * *'   # 每天北京时间凌晨 04:00 运行
+  workflow_dispatch:        # 支持手动触发测速
+
+permissions:
+  contents: write           # 必须具备写入权限以更新文件
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Run Cloudflare SpeedTest
+        env:
+          TOP_N: "50"        # 修改为您希望保留的最佳 IP 数量
+          CFST_ARGS: "-n 200 -t 4 -dt 8 -p 0 -o result.csv" # 测速参数
+        run: |
+          if [ -f scripts/run_speedtest.py ]; then
+            python3 scripts/run_speedtest.py
+          fi
+
+      - name: Commit & Push
+        run: |
+          if [[ -n "$(git status --porcelain)" ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add best_ip.txt result.csv
+            git commit -m "chore: update best ip $(date -u +%F)"
+            git push
+          else
+            echo "No changes detected."
+          fi
