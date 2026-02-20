@@ -22,7 +22,7 @@ jobs:
 
       - name: Run Cloudflare SpeedTest
         env:
-          MAX_PER_REGION: "10"        # 每个地区最多选择的IP数量
+          MAX_PER_REGION: "50"        # 每个地区最多选择的IP数量（增加美国IP的选择数量）
           MAX_TOTAL: "100"            # 总共最多选择的IP数量
           PRIORITY_REGIONS: "US,GB,IN,JP,KR,SG,HK"  # 优先处理的地区
           CFST_ARGS: "-n 200 -t 4 -dt 8 -p 0 -o result.csv" # 测速参数

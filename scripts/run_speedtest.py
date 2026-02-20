@@ -97,6 +97,12 @@ def parse_top_ips_by_region(csv_path: Path, regions: list[str], max_per_region: 
         # 172.65.0.0 - 172.67.255.255
         elif first_octet == 172 and 65 <= second_octet <= 67:
             return "US"
+        # 173.245.48.0 - 173.245.63.255
+        elif first_octet == 173 and second_octet == 245:
+            return "US"
+        # 188.114.96.0 - 188.114.111.255
+        elif first_octet == 188 and second_octet == 114:
+            return "US"
         
         # 英国IP段
         # 141.101.64.0 - 141.101.127.255
@@ -191,6 +197,19 @@ def parse_top_ips_by_region(csv_path: Path, regions: list[str], max_per_region: 
                 
             if region not in regions:  # 只选择非优先地区的IP
                 selected_ips.append(ip)
+            
+            # 如果达到总数限制，停止
+            if len(selected_ips) >= max_total:
+                break
+    
+    # 如果仍然有空位（因为优先地区IP数量不足），从所有IP中选择最快的前N个
+    if len(selected_ips) < max_total:
+        # 重新遍历所有IP，选择最快的前N个（不考虑地区）
+        for ip, latency, region in ip_data:
+            if ip in selected_ips:  # 跳过已选择的IP
+                continue
+                
+            selected_ips.append(ip)
             
             # 如果达到总数限制，停止
             if len(selected_ips) >= max_total:
