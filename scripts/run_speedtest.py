@@ -10,15 +10,55 @@ import tarfile
 import zipfile
 import urllib.request
 import subprocess
+import platform
 from pathlib import Path
 
-RELEASE_URL_LINUX_AMD64_TGZ = (
-    "https://github.com/XIU2/CloudflareSpeedTest/releases/download/v2.3.4/"
-    "cfst_linux_amd64.tar.gz"
-)
+# CloudflareSpeedTest 发布版本
+RELEASE_VERSION = "v2.3.4"
+RELEASE_BASE_URL = f"https://github.com/XIU2/CloudflareSpeedTest/releases/download/{RELEASE_VERSION}"
 
 # ip.txt 的官方原始地址（master 分支）
 IP_TXT_URL = "https://raw.githubusercontent.com/XIU2/CloudflareSpeedTest/master/ip.txt"  # :contentReference[oaicite:1]{index=1}
+
+def get_platform_url() -> str:
+    """
+    根据当前操作系统和架构返回正确的下载URL
+    """
+    system = platform.system().lower()
+    machine = platform.machine().lower()
+    
+    # 映射架构名称
+    arch_map = {
+        'x86_64': 'amd64',
+        'amd64': 'amd64',
+        'i386': '386',
+        'i686': '386',
+        'arm64': 'arm64',
+        'aarch64': 'arm64',
+        'armv5': 'armv5',
+        'armv6': 'armv6',
+        'armv7': 'armv7',
+        'mips': 'mips',
+        'mips64': 'mips64',
+        'mips64le': 'mips64le',
+        'mipsle': 'mipsle'
+    }
+    
+    # 获取架构
+    arch = arch_map.get(machine, machine)
+    
+    # 构建文件名
+    if system == 'darwin':  # macOS
+        filename = f"cfst_darwin_{arch}.zip"
+    elif system == 'linux':
+        filename = f"cfst_linux_{arch}.tar.gz"
+    elif system == 'windows':
+        filename = f"cfst_windows_{arch}.zip"
+    else:
+        # 默认使用 Linux amd64
+        filename = "cfst_linux_amd64.tar.gz"
+    
+    return f"{RELEASE_BASE_URL}/{filename}"
 
 def download(url: str, dst: Path) -> None:
     dst.parent.mkdir(parents=True, exist_ok=True)
@@ -240,12 +280,15 @@ def main() -> int:
     work_dir = repo_root / ".tmp_cfst"
     work_dir.mkdir(parents=True, exist_ok=True)
 
-    archive = work_dir / "cfst_linux_amd64.tar.gz"
+    # 获取适合当前平台的下载URL
+    download_url = get_platform_url()
+    archive_filename = download_url.split("/")[-1]
+    archive = work_dir / archive_filename
     bin_dir = work_dir / "bin"
 
     if not archive.exists():
-        print(f"Downloading cfst from {RELEASE_URL_LINUX_AMD64_TGZ}")
-        download(RELEASE_URL_LINUX_AMD64_TGZ, archive)
+        print(f"Downloading cfst from {download_url}")
+        download(download_url, archive)
 
     if bin_dir.exists():
         shutil.rmtree(bin_dir)
