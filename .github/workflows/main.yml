@@ -15,10 +15,33 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - name: Use preinstalled Python (standard library only)
+        shell: bash
+        run: |
+          python3 --version
+          mkdir -p "$RUNNER_TEMP/python-bin"
+          ln -sf "$(command -v python3)" "$RUNNER_TEMP/python-bin/python"
+          echo "$RUNNER_TEMP/python-bin" >> "$GITHUB_PATH"
+
+      - name: Identify pinned speed-test version
+        id: cfst-version
+        run: |
+          python3 - <<'PYTHON'
+          import ast, os
+          tree = ast.parse(open('scripts/run_speedtest.py').read())
+          version = next(ast.literal_eval(node.value) for node in tree.body
+                         if isinstance(node, ast.Assign)
+                         and any(isinstance(t, ast.Name) and t.id == 'RELEASE_VERSION' for t in node.targets))
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as stream:
+              print('version=' + version, file=stream)
+          PYTHON
+      - name: Restore speed-test download
+        uses: actions/cache@v4
         with:
-          python-version: '3.10'
+          path: |
+            .tmp_cfst/*.tar.gz
+            .tmp_cfst/*.zip
+          key: cfst-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.cfst-version.outputs.version }}-end
 
       - name: Run Cloudflare SpeedTest
         env:
